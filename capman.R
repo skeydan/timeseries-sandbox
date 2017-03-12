@@ -103,17 +103,17 @@ plot(forecast(fit, h=90))
 
 ############################ auto.arima #############################
 
-fit <- auto.arima(dbcpu_ts, max.order = 20, stepwise=FALSE)
+fit <- auto.arima(dbcpu_ts, max.order = 10, stepwise=FALSE)
 summary(fit)
 plot(fit)
 plot(forecast(fit, h=90))
 
-fit <- auto.arima(dbtime_ts, max.order = 20, stepwise=FALSE)
+fit <- auto.arima(dbtime_ts, max.order = 10, stepwise=FALSE)
 summary(fit)
 plot(fit)
 plot(forecast(fit, h=90))
 
-fit <- auto.arima(iops_ts, max.order = 20, stepwise=FALSE)
+fit <- auto.arima(iops_ts, max.order = 10, stepwise=FALSE)
 summary(fit)
 plot(fit)
 plot(forecast(fit, h=90))
@@ -135,6 +135,11 @@ plot(forecast(fit, xreg=cbind(rep(1,90), rep(1,90), rep(1,90)), h=90))
 
 ############################ kalman ###################################
 
+ts <- dbcpu_ts
+ts <- dbtime_ts
+#ts <- iops_ts
+#ts <- size_ts
+
 #  Random walk plus noise model (polynomial model of order one)
 
 # dlmModPoly(order = 2, dV = 1, dW = c(rep(0, order - 1), 1), m0 = rep(0, order), C0 = 1e+07 * diag(nrow = order)) 
@@ -146,7 +151,7 @@ build_model <- function(params) dlmModPoly(order = 1, dV = params[1], dW = param
 # dlmMLE(y, parm, build, method = "L-BFGS-B", ..., debug = FALSE) 
 # parm: vector of initial values for optimization
 # build: function from vector of same length as parm to a dlm object
-estim <- dlmMLE(dbcpu_ts, parm = c(0,0), build = build_model)
+estim <- dlmMLE(ts, parm = c(0,0), build = build_model)
 
 # Checking that the MLE estimates has converged
 estim$convergence
@@ -158,8 +163,8 @@ fitted$V
 # system variance
 fitted$W
 
-filtered<- dlmFilter(y = dbcpu_ts, mod = fitted)
-smoothed <- dlmSmooth(y = dbcpu_ts, mod = fitted)
+filtered<- dlmFilter(y = ts, mod = fitted)
+smoothed <- dlmSmooth(y = ts, mod = fitted)
 # If you do end up with a time-variant model, you'll want to fill out your input data with NA's and let 
 # the dlmFilter fill in the NA's for you (a poor man's forecast), since dlmForecast does not work with time-varying
 # parameters.
@@ -168,12 +173,12 @@ forecast_obj$f
 
 head(filtered$m)
 head(smoothed$s)
-head(dbcpu_ts)
+head(ts)
 tail(filtered$f)
 tail(smoothed$s)
-tail(dbcpu_ts)
+tail(ts)
 
-comp_df <- data_frame(x=index(dbcpu_ts), orig=dbcpu_ts, f = filtered$m[-1], s = smoothed$s[-1])
+comp_df <- data_frame(x=index(ts), orig=ts, f = filtered$m[-1], s = smoothed$s[-1])
 ggplot(comp_df, aes(x)) + 
   geom_point(aes(y=orig), colour='black', size=0.2) +
   geom_line(aes(y=f), colour='red', size=0.2) + 
