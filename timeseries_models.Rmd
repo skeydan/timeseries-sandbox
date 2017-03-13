@@ -7,6 +7,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(forecast)
+library(tseries)
 ```
 
 ## Discrete White Noise
@@ -222,14 +223,127 @@ $$\sigma^2_t = \alpha_0 + \sum_{i=1}^{q} \alpha_i \epsilon_{t-i}^2 + \sum_{j=1}^
 
 
 ```{r}
-set.seed(777)
+#create the data
+# set.seed(777) does not converge
+set.seed(2)
 a0 <- 0.2
 a1 <- 0.5
 b1 <- 0.3
 w <- rnorm(10000)
 eps <- rep(NA, 10000)
+eps[1] <- 0
 sigsq <- rep(NA, 10000)
+sigsq[1] <- 0
 for (i in 2:10000) {
-sigsq[i] <- a0 + a1 * (eps[i-1]^2) + b1 * sigsq[i-1]
-eps[i] <- w[i]*sqrt(sigsq[i])}
+  sigsq[i] <- a0 + a1 * (eps[i-1]^2) + b1 * sigsq[i-1]
+  eps[i] <- w[i]*sqrt(sigsq[i])
+}
+
+# does the series look like white noise? 
+acf(eps)
+#  does the series squared look like white noise? 
+acf(eps^2)
+
+fit <- garch(eps)
+summary(fit)
+confint(fit)
+```
+
+
+## ARIMA and GARCH residuals compared
+
+```{r}
+#create the data
+# set.seed(777) does not converge
+set.seed(2)
+a0 <- 0.2
+a1 <- 0.5
+b1 <- 0.3
+w <- rnorm(10000)
+eps <- rep(NA, 10000)
+eps[1] <- 0
+sigsq <- rep(NA, 10000)
+sigsq[1] <- 0
+for (i in 2:10000) {
+  sigsq[i] <- a0 + a1 * (eps[i-1]^2) + b1 * sigsq[i-1]
+  eps[i] <- w[i]*sqrt(sigsq[i])
+}
+
+# ARIMA
+fit1 <- auto.arima(eps)
+summary(fit1)
+# do the residuals look like white noise? 
+acf(resid(fit1))
+#  do the squared residuals look like white noise?
+acf(resid(fit1)^2)
+
+# GARCH
+fit2 <- garch(eps)
+summary(fit2)
+# do the residuals look like white noise? 
+acf(resid(fit2)[-1])
+#  do the squared residuals look like white noise?
+acf((resid(fit2)^2)[-1])
+```
+
+
+## ARIMA and GARCH using rugarch
+
+```{r}
+library(rugarch)
+
+#create the data
+# set.seed(777) does not converge
+set.seed(2)
+a0 <- 0.2
+a1 <- 0.5
+b1 <- 0.3
+w <- rnorm(10000)
+eps <- rep(NA, 10000)
+eps[1] <- 0
+sigsq <- rep(NA, 10000)
+sigsq[1] <- 0
+for (i in 2:10000) {
+  sigsq[i] <- a0 + a1 * (eps[i-1]^2) + b1 * sigsq[i-1]
+  eps[i] <- w[i]*sqrt(sigsq[i])
+}
+
+# get arima order 
+library(forecast)
+fit1 <- auto.arima(eps)
+o1 <- arimaorder(fit)
+s
+# create spec for ugarch
+spec = ugarchspec(
+  variance.model=list(garchOrder=c(1,1)),
+  mean.model=list(armaOrder=c(o1[1], o1[3]), include.mean=T),
+  distribution.model="sged")
+spec
+
+# fit ugarch
+fit2 = ugarchfit(spec, eps, solver = 'hybrid')
+fit2
+```
+
+
+# Cointegration
+
+## Using standard lm
+
+```{r}
+library("quantmod")
+
+getSymbols("EWA", from="2006-04-26", to="2012-04-09")
+getSymbols("EWC", from="2006-04-26", to="2012-04-09")
+
+ewaAdj = unclass(EWA$EWA.Adjusted)
+ewcAdj = unclass(EWC$EWC.Adjusted)
+
+plot(ewaAdj, type="l", xlim=c(0, 1500), ylim=c(5.0, 35.0),
+xlab="April 26th 2006 to April 9th 2012",
+ylab="ETF Backward-Adjusted Price in USD", col="blue")
+par(new=T)
+plot(ewcAdj, type="l", xlim=c(0, 1500), ylim=c(5.0, 35.0),
+axes=F, xlab="", ylab="", col="red")
+par(new=F)
 ```
