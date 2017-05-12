@@ -10,6 +10,7 @@ library(forecast)
 library(tseries)
 ```
 
+
 ## Discrete White Noise
 
 If the elements of the series, $w_i$ , are independent and identically distributed (i.i.d.),
@@ -311,8 +312,8 @@ for (i in 2:10000) {
 # get arima order 
 library(forecast)
 fit1 <- auto.arima(eps)
-o1 <- arimaorder(fit)
-s
+o1 <- arimaorder(fit1)
+
 # create spec for ugarch
 spec = ugarchspec(
   variance.model=list(garchOrder=c(1,1)),
